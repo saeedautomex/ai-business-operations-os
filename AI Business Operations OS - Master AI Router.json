@@ -1,0 +1,604 @@
+{
+  "name": "AI Business Operations OS - Master AI Router",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ai-business-ops",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c268b130-42e5-4fe2-aac2-c620bf16bacb",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2384,
+        320
+      ],
+      "webhookId": "27a80d55-57fd-4988-bc35-273dc9add92e"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-001",
+              "name": "input",
+              "value": "={{ $json.body?.message || $json.body?.text || $json.message || $json.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-002",
+              "name": "source",
+              "value": "={{ $json.headers?.['x-source'] || 'webhook' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-003",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c08d6e2-e1a7-43e6-9200-49658260b3d6",
+      "name": "Normalize Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2176,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "589448a6-b3ff-4835-9b2c-b9db39d37cd8",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -2016,
+        496
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "BuqeONgQaOO8u63k",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=You are the Master AI Business Operations Router.\n\nIncoming request:\n{{ $json.input }}\n\nClassify the request into exactly one category:\n\nSALES\nSUPPORT\nOPERATIONS\nDOCUMENT\nGENERAL\n\nReturn ONLY valid JSON:\n\n{\n  \"category\": \"SALES|SUPPORT|OPERATIONS|DOCUMENT|GENERAL\",\n  \"priority\": \"LOW|MEDIUM|HIGH|URGENT\",\n  \"intent\": \"short description\",\n  \"needs_human\": true,\n  \"reply\": \"professional response\"\n}\n\nRules:\n- URGENT issues or angry customers must set needs_human=true.\n- Never invent prices, order numbers, refunds, policies, or company facts.\n- If uncertain, use GENERAL and needs_human=true.",
+        "options": {}
+      },
+      "id": "f121b18f-90b9-43b0-b7ad-6a2c9fc8d676",
+      "name": "Master AI Router",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -1952,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output || '';\n\nlet cleaned = raw.trim();\nif (cleaned.startsWith('```')) {\n  cleaned = cleaned.replace(/^```[a-z]*\\n?/, '').replace(/```$/, '').trim();\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (match) {\n    try {\n      parsed = JSON.parse(match[0]);\n    } catch (e2) {\n      parsed = {\n        category: 'GENERAL',\n        priority: 'MEDIUM',\n        intent: 'Unable to parse AI response',\n        needs_human: true,\n        reply: 'Thank you for your message. A human agent will review your request shortly.'\n      };\n    }\n  } else {\n    parsed = {\n      category: 'GENERAL',\n      priority: 'MEDIUM',\n      intent: 'Unable to parse AI response',\n      needs_human: true,\n      reply: 'Thank you for your message. A human agent will review your request shortly.'\n    };\n  }\n}\n\nconst validCategories = ['SALES', 'SUPPORT', 'OPERATIONS', 'DOCUMENT', 'GENERAL'];\nif (!validCategories.includes(parsed.category)) {\n  parsed.category = 'GENERAL';\n  parsed.needs_human = true;\n}\n\nconst validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];\nif (!validPriorities.includes(parsed.priority)) {\n  parsed.priority = 'MEDIUM';\n}\n\nreturn [\n  {\n    json: {\n      category: parsed.category,\n      priority: parsed.priority,\n      intent: parsed.intent || '',\n      needs_human: parsed.needs_human === true,\n      reply: parsed.reply || '',\n      input: $('Normalize Request').first().json.input,\n      source: $('Normalize Request').first().json.source,\n      timestamp: $('Normalize Request').first().json.timestamp\n    }\n  }\n];"
+      },
+      "id": "47727a70-5b68-44c4-a757-c3fee1b0ba14",
+      "name": "Parse AI Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "dcebd3bc-72c7-4cff-adbc-6e390704c44e",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "SALES",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SALES"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "4f259bc4-a181-4022-8272-994c69a574c5",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "SUPPORT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SUPPORT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "f0e65fec-c555-4dfe-a173-face702177ef",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "OPERATIONS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "OPERATIONS"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "41156ac4-b093-4ea5-9d11-6d79d2a92e62",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "DOCUMENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DOCUMENT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "598a3d19-1ac8-4c50-9297-59a8264698cd",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "GENERAL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "GENERAL"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "47e82c6f-9a75-413d-8010-9e7b216fb99a",
+      "name": "Department Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1424,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sales-001",
+              "name": "department",
+              "value": "Sales Department",
+              "type": "string"
+            },
+            {
+              "id": "sales-002",
+              "name": "next_action",
+              "value": "Create or qualify lead and start follow-up sequence",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "9c02ee8d-c01e-4dd1-af0c-1a47fc1fa67f",
+      "name": "Sales Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1168,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "support-001",
+              "name": "department",
+              "value": "Customer Support",
+              "type": "string"
+            },
+            {
+              "id": "support-002",
+              "name": "next_action",
+              "value": "Create support case and escalate when human review is needed",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "79328d7d-5902-4492-b16b-5fd2c9d339b8",
+      "name": "Support Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1168,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ops-001",
+              "name": "department",
+              "value": "Operations",
+              "type": "string"
+            },
+            {
+              "id": "ops-002",
+              "name": "next_action",
+              "value": "Create internal task and route to the correct owner",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "40f35679-92e7-4319-8ef3-aaf37f66e77a",
+      "name": "Operations Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1168,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "doc-001",
+              "name": "department",
+              "value": "Document Intelligence",
+              "type": "string"
+            },
+            {
+              "id": "doc-002",
+              "name": "next_action",
+              "value": "Extract, summarize, classify, and store document information",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c59c1b73-a683-419b-bf32-b2317cd4ea9b",
+      "name": "Document Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1168,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "gen-001",
+              "name": "department",
+              "value": "General / Human Review",
+              "type": "string"
+            },
+            {
+              "id": "gen-002",
+              "name": "next_action",
+              "value": "Human review recommended",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c9486948-66ca-48c0-a817-f83d113da180",
+      "name": "General Branch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1168,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"category\": \"{{ $json.category }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"intent\": \"{{ $json.intent }}\",\n  \"needs_human\": {{ $json.needs_human }},\n  \"reply\": \"{{ $json.reply }}\",\n  \"department\": \"{{ $json.department }}\",\n  \"next_action\": \"{{ $json.next_action }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\"\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "158da261-bb48-44e3-8d7d-a0a900ed2426",
+      "name": "Final JSON Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -928,
+        320
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "node": "Master AI Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Master AI Router",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Master AI Router": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Decision": {
+      "main": [
+        [
+          {
+            "node": "Department Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Department Router": {
+      "main": [
+        [
+          {
+            "node": "Sales Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Support Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Operations Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Document Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales Branch": {
+      "main": [
+        [
+          {
+            "node": "Final JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support Branch": {
+      "main": [
+        [
+          {
+            "node": "Final JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Operations Branch": {
+      "main": [
+        [
+          {
+            "node": "Final JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Branch": {
+      "main": [
+        [
+          {
+            "node": "Final JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Branch": {
+      "main": [
+        [
+          {
+            "node": "Final JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8913ee30-40a3-42e6-bd1c-7065ba173f81",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1dbd9f701b4ac9eb54458bc734d7603db678d7c0a45fa068044d3f68e0d9e95e"
+  },
+  "nodeGroups": [],
+  "id": "Uk6xoVIS6wjK5gYy",
+  "tags": [
+    {
+      "name": "AI Employee",
+      "id": "QXJStmsDsXkM8OIF",
+      "updatedAt": "2026-07-27T07:26:18.718Z",
+      "createdAt": "2026-07-27T07:26:18.718Z"
+    },
+    {
+      "name": "v2.31.5",
+      "id": "dJOxLHfhQSZJURv0",
+      "updatedAt": "2026-07-27T07:26:18.691Z",
+      "createdAt": "2026-07-27T07:26:18.691Z"
+    }
+  ]
+}
