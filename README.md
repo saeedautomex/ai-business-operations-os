@@ -1,46 +1,92 @@
-# AI Business Operations OS
+# 🤖 AI Business Operations OS
 
 An AI-powered business automation system built with n8n and OpenAI.
 
-## Features
+This system intelligently understands incoming business requests, classifies them, detects priority, and routes them to the correct department automatically.
 
-- AI-powered request classification
-- Sales routing
-- Customer support routing
-- Operations routing
-- Document intelligence routing
-- Human review escalation
-- Priority detection
-- Webhook-based architecture
+---
 
-## Architecture
+## 🚀 How It Works
 
-Webhook
-↓
-Normalize Request
-↓
-Master AI Router
-↓
-AI Decision Parser
-↓
-Department Router
-├── Sales
-├── Support
-├── Operations
-├── Document Intelligence
-└── Human Review
+Incoming Request  
+↓  
+Webhook  
+↓  
+Normalize Request  
+↓  
+Master AI Router  
+↓  
+AI Decision Parser  
+↓  
+Department Router  
+↓  
+Sales / Support / Operations / Documents / Human Review  
+↓  
+Final Response
 
-## Tech Stack
+---
+
+## 🧠 AI Capabilities
+
+The Master AI Router analyzes incoming requests and classifies them into:
+
+- 💰 Sales
+- 🛠️ Customer Support
+- ⚙️ Operations
+- 📄 Document Intelligence
+- 👤 General / Human Review
+
+The AI also detects:
+
+- Request intent
+- Priority level
+- Human escalation requirement
+- Recommended next action
+- AI-generated response
+
+---
+
+## 🔄 Workflow Architecture
+
+Webhook  
+↓  
+Normalize Request  
+↓  
+Master AI Router  
+↓  
+Parse AI Decision  
+↓  
+AI Department Router  
+├── Sales Automation  
+├── Support Automation  
+├── Operations Automation  
+├── Document Automation  
+└── General / Human Review  
+↓  
+Final JSON Response
+
+---
+
+## 🛠️ Tech Stack
 
 - n8n
 - OpenAI
 - Webhooks
-- AI Automation
-- JSON
+- AI Routing
+- Workflow Automation
+- JSON Data Processing
 
-## Setup
+---
 
-1. Import the workflow into n8n.
-2. Add your own OpenAI credentials.
-3. Activate the workflow.
-4. Send a request to the webhook.
+## 📌 Example Request
+
+I want to know your pricing and book a demo.
+
+### AI Classification
+
+```json
+{
+  "category": "SALES",
+  "priority": "MEDIUM",
+  "needs_human": false
+}
